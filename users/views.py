@@ -8,6 +8,41 @@ from .serializers import UserRegistrationSerializer, OTPVerificationSerializer
 from .models import User, OTP, Report  # Add Report model import
 from .utils import create_otp_for_user
 
+# users/views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from .models import User, Profile
+from .serializers import ProfileSerializer  # You'll need to create this serializer
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, user_id=None):
+        if user_id:
+            # Get another user's profile
+            try:
+                profile = Profile.objects.get(user_id=user_id)
+                serializer = ProfileSerializer(profile)
+                return Response(serializer.data)
+            except Profile.DoesNotExist:
+                return Response({"error": "Profile not found"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # Get the authenticated user's profile
+            profile = request.user.profile
+            serializer = ProfileSerializer(profile)
+            return Response(serializer.data)
+    
+    def put(self, request):
+        # Update the authenticated user's profile
+        profile = request.user.profile
+        serializer = ProfileSerializer(profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 class UserRegistrationView(APIView):
     def post(self, request):
         serializer = UserRegistrationSerializer(data=request.data)
